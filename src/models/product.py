@@ -1,13 +1,16 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import sqlalchemy.dialects.postgresql as pg
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Field, SQLModel, Column, Relationship
 
-from src.models.category import ProductCategory
-from src.models.orders import OrderProduct
+if TYPE_CHECKING:
+    from src.models.category import ProductCategory
+    from src.models.orders import OrderProduct
 
 
 class Product(SQLModel, table=True):
@@ -17,7 +20,9 @@ class Product(SQLModel, table=True):
     """
 
     __tablename__ = "products"
-    uid: uuid.UUID = Field(primary_key=True, default=uuid.uuid4)
+    uid: uuid.UUID = Field(
+        sa_column=Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    )
     title: str
     description: str
     price: float
@@ -27,7 +32,7 @@ class Product(SQLModel, table=True):
         sa_column=Column(pg.VARCHAR(length=100), nullable=False, unique=True)
     )
     section: str = Field(
-        sa_column=Column(pg.VARCHAR(length=100), nullable=False, unique=True)
+        sa_column=Column(pg.VARCHAR(length=100), nullable=False)
     )
     date_validation: Optional[datetime] = Field(
         sa_column=Column(pg.TIMESTAMP(timezone=True), nullable=True)

@@ -29,5 +29,11 @@ class Customer(SQLModel, table=True):
     is_active: bool = Field(default=True, nullable=False)
     is_superuser: bool = Field(default=False, nullable=False)
     is_verified: bool = Field(default=False, nullable=False)
-    orders: List["Order"] = Relationship(back_populates="customer")
-    addresses: List["Address"] = Relationship(back_populates="customer")
+    orders: List["Order"] = Relationship(
+        back_populates="customer",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    addresses: List["Address"] = Relationship(
+        back_populates="customer",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
+    )

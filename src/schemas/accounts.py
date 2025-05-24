@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, field_validator, ConfigDict, EmailStr
 
 
 class UserCreateModel(BaseModel):
@@ -37,7 +37,7 @@ class UserLoginModel(BaseModel):
     email: EmailStr = Field(max_length=40)
     password: str = Field(max_length=12)
 
-    @validator("password")
+    @field_validator("password")
     def validate_password(cls, password):
         if not (8 <= len(password) <= 12):
             raise ValueError("A senha deve ter entre 8 e 12 caracteres")

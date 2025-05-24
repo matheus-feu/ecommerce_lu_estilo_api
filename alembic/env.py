@@ -17,7 +17,7 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-import src.db.__all_models  # noqa: F401
+import src.db.base  # noqa: F401
 target_metadata = SQLModel.metadata
 
 

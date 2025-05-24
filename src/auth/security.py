@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.auth.dependencies import AccessTokenBearer
 from src.db.database import get_session
-from src.exceptions.errors import InsufficientPermission, AccountNotVerified, InvalidToken, UserNotFound
+from src.exceptions.errors import InsufficientPermissionError, AccountNotVerifiedError, InvalidTokenError, UserNotFoundError
 from src.models.customer import Customer
 from src.services.accounts import UserService
 
@@ -17,19 +17,19 @@ async def get_current_user(
     try:
         user_email = token_details.get("email")
         if not user_email:
-            raise InvalidToken("Token inválido ou expirado.")
+            raise InvalidTokenError("Token inválido ou expirado.")
 
         user = await UserService.get_user_by_email(user_email, session)
         if not user:
-            raise UserNotFound("Usuário não encontrado.")
+            raise UserNotFoundError("Usuário não encontrado.")
 
         if not user.is_verified:
-            raise AccountNotVerified("Usuário não verificado.")
+            raise AccountNotVerifiedError("Usuário não verificado.")
 
         return user
 
     except Exception as e:
-        raise InvalidToken(f"Token inválido ou expirado: {str(e)}")
+        raise InvalidTokenError(f"Token inválido ou expirado: {str(e)}")
 
 class RoleChecker:
     def __init__(self, allowed_roles: List[str]) -> None:
@@ -37,8 +37,8 @@ class RoleChecker:
 
     def __call__(self, current_user: Customer = Depends(get_current_user)) -> Any:
         if not current_user.is_verified:
-            raise AccountNotVerified()
+            raise AccountNotVerifiedError()
         if current_user.role in self.allowed_roles:
             return True
 
-        raise InsufficientPermission()
+        raise InsufficientPermissionError()

@@ -4,13 +4,13 @@ from fastapi import BackgroundTasks
 from fastapi import status
 from starlette.responses import JSONResponse
 
-from src.core.config import settings
+from src.core.settings import settings
 from src.core.mail import send_email
 from src.db.redis import add_jti_to_blocklist
 from src.exceptions.errors import (
-    UserAlreadyExists,
-    InvalidCredentials,
-    InvalidToken
+    UserAlreadyExistsError,
+    InvalidCredentialsError,
+    InvalidTokenError
 )
 from src.schemas.accounts import SignupResponseModel, UserResponseModel
 from src.services.accounts import UserService
@@ -33,16 +33,16 @@ class AuthService:
         try:
             email = user_data.email
             if await UserService.user_exists(email=email, session=session):
-                raise UserAlreadyExists()
+                raise UserAlreadyExistsError()
 
             token = create_url_safe_token({"email": email})
 
             new_user = await UserService.create_user(user_data, session)
-            verification_url = f"{settings.APP_PROTOCOL}://{settings.APP_HOST}:{settings.APP_PORT}{settings.APP_V1_PREFIX}/accounts/verify-email?token={token}"
+            verification_url = f"{settings.app.APP_PROTOCOL}://{settings.app.APP_HOST}:{settings.APP_PORT}{settings.app.APP_V1_PREFIX}/accounts/verify-email?token={token}"
 
             email_body = {
-                "company_name": settings.MAIL_FROM_NAME,
-                "link_expiry_min": settings.VERIFICATION_LINK_EXPIRE_MINUTES,
+                "company_name": settings.email.MAIL_FROM_NAME,
+                "link_expiry_min": settings.auth.VERIFICATION_LINK_EXPIRE_MINUTES,
                 "verification_link": verification_url
             }
             template_str = """
@@ -66,7 +66,7 @@ class AuthService:
             )
 
         except Exception as e:
-            raise UserAlreadyExists("User with this email already exists: {}".format(e))
+            raise UserAlreadyExistsError("User with this email already exists: {}".format(e))
 
     @classmethod
     async def login(cls, login_data, session):
@@ -79,10 +79,10 @@ class AuthService:
             user = await UserService.get_user_by_email(email=email, session=session)
 
             if not user or not verify_password(password, user.password_hash):
-                raise InvalidCredentials()
+                raise InvalidCredentialsError()
 
             if not getattr(user, "is_verified", False):
-                raise InvalidCredentials()
+                raise InvalidCredentialsError()
 
             access_token = create_access_token(
                 user_data={
@@ -98,7 +98,7 @@ class AuthService:
                     "role": user.role
                 },
                 refresh=True,
-                expiry=timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
+                expiry=timedelta(minutes=settings.auth.REFRESH_TOKEN_EXPIRE_MINUTES),
             )
 
             return JSONResponse(
@@ -111,10 +111,10 @@ class AuthService:
                 status_code=status.HTTP_200_OK
             )
 
-        except UserAlreadyExists:
-            raise UserAlreadyExists("User with this email already exists.")
-        except InvalidCredentials:
-            raise InvalidCredentials("Account not verified. Please check your email to verify your account.")
+        except UserAlreadyExistsError:
+            raise UserAlreadyExistsError("User with this email already exists.")
+        except InvalidCredentialsError:
+            raise InvalidCredentialsError("Account not verified. Please check your email to verify your account.")
         except Exception as e:
             raise Exception(f"An error occurred: {str(e)}")
 
@@ -126,11 +126,11 @@ class AuthService:
         try:
             token_data = decode_token(token_details.credentials)
             if not token_data:
-                raise InvalidToken("Token inválido")
+                raise InvalidTokenError("Token inválido")
 
             jti = token_data["jti"]
             await add_jti_to_blocklist(jti)
 
             return JSONResponse(content={"message": "Logged Out Successfully"}, status_code=status.HTTP_200_OK)
         except Exception:
-            raise InvalidToken("Token inválido ou malformado")
+            raise InvalidTokenError("Token inválido ou malformado")

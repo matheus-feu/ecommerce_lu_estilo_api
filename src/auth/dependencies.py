@@ -4,7 +4,7 @@ from fastapi.security.http import HTTPAuthorizationCredentials
 
 from src.db.redis import token_in_blocklist
 from src.exceptions.errors import (
-    InvalidToken, AccessTokenRequired, RefreshTokenRequired,
+    InvalidTokenError, AccessTokenRequiredError, RefreshTokenRequiredError,
 )
 from src.utils.utils import decode_token
 
@@ -19,10 +19,10 @@ class JWTBearer(HTTPBearer):
 
         token_data = decode_token(token)
         if not self.token_valid(token_data):
-            raise InvalidToken()
+            raise InvalidTokenError()
 
         if await token_in_blocklist(token_data["jti"]):
-            raise InvalidToken()
+            raise InvalidTokenError()
 
         self.verify_token(token_data)
 
@@ -41,7 +41,7 @@ class AccessTokenBearer(JWTBearer):
     """
     def verify_token_data(self, token_data: dict) -> None:
         if token_data and token_data["refresh"]:
-            raise AccessTokenRequired()
+            raise AccessTokenRequiredError()
         return None
 
 
@@ -51,5 +51,5 @@ class RefreshTokenBearer(JWTBearer):
     """
     def verify_token_data(self, token_data: dict) -> None:
         if token_data and not token_data["refresh"]:
-            raise RefreshTokenRequired()
+            raise RefreshTokenRequiredError()
         return None

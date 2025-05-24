@@ -7,12 +7,12 @@ from jinja2 import Template
 from jose import jwt, ExpiredSignatureError, JWTError
 from passlib.context import CryptContext
 
-from src.core.config import settings
+from src.core.settings import settings
 
 passwd_context = CryptContext(schemes=["bcrypt"])
 
 serializer = URLSafeTimedSerializer(
-    secret_key=settings.JWT_SECRET_KEY, salt="email-configuration"
+    secret_key=settings.security.JWT_SECRET_KEY, salt="email-configuration"
 )
 
 
@@ -61,8 +61,8 @@ def create_access_token(user_data: dict, expiry: timedelta = None, refresh: bool
 
     token = jwt.encode(
         payload,
-        key=settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
+        key=settings.security.JWT_SECRET_KEY,
+        algorithm=settings.security.JWT_ALGORITHM
     )
 
     return token
@@ -72,8 +72,8 @@ def decode_token(token: str):
     try:
         token_data = jwt.decode(
             token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
+            settings.security.JWT_SECRET_KEY,
+            algorithms=[settings.security.JWT_ALGORITHM]
         )
         return token_data
     except ExpiredSignatureError:
@@ -110,8 +110,8 @@ def decode_reset_password_token(token: str) -> str | None:
     try:
         payload = jwt.decode(
             token,
-            key=settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
+            key=settings.security.JWT_SECRET_KEY,
+            algorithms=[settings.security.JWT_ALGORITHM]
         )
         email: str = payload.get("sub")
         return email

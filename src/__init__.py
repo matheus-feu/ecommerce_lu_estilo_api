@@ -1,14 +1,16 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
 from fastapi_pagination.utils import disable_installed_extensions_check
 
 from src.api.v1.api import api_router
-from src.core.config import settings
 from src.core.logger import logger
+from src.core.middleware import register_middleware
+from src.core.settings import settings
 from src.db.database import async_engine
 from src.db.database import init_db
 from src.exceptions.errors import register_all_errors
-from src.middleware import register_middleware
 
 description = """
     Welcome to the Lu Estilo E-commerce API documentation. 🚀
@@ -38,10 +40,22 @@ description = """
     - Github: https://github.com/matheus-feu
     """
 
+
+def include_router(app):
+    app.include_router(api_router)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    await init_db()
+    yield
+
+
 app = FastAPI(
     description=description,
     title="Lu Estilo E-commerce API",
     version="1.0.0",
+    lifespan=lifespan,
     contact={
         "name": "Matheus Feu",
         "url": "https://github.com/matheus-feu"
@@ -58,23 +72,13 @@ app = FastAPI(
     },
 )
 
+add_pagination(app)
+include_router(app)
+
+disable_installed_extensions_check()
+
 register_all_errors(app)
 register_middleware(app)
-
-
-def include_router(app):
-    app.include_router(api_router)
-
-
-def start_application():
-    add_pagination(app)
-    include_router(app)
-    disable_installed_extensions_check()
-
-
-@app.on_event("startup")
-async def on_startup():
-    await init_db()
 
 
 @app.get("/api/v1/healthcheck", tags=["healthcheck"])

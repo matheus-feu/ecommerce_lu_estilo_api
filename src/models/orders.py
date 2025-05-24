@@ -1,9 +1,18 @@
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 from sqlalchemy.dialects import postgresql as pg
 from sqlmodel import SQLModel, Field, Relationship, Column
+
+
+class OrderStatusEnum(str, Enum):
+    pending = "pending"
+    paid = "paid"
+    shipped = "shipped"
+    delivered = "delivered"
+    cancelled = "cancelled"
 
 
 class Order(SQLModel, table=True):
@@ -17,7 +26,7 @@ class Order(SQLModel, table=True):
     )
     total_price: float = Field(default=0.0)
     customer_id: uuid.UUID = Field(foreign_key="customers.uid")
-    status: str = Field(sa_column=Column(pg.VARCHAR(length=20), nullable=False))
+    status: OrderStatusEnum = Field(sa_column=Column(pg.VARCHAR(length=20)))
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     customer_id: uuid.UUID = Field(foreign_key="customers.uid")

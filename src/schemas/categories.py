@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -8,8 +8,10 @@ class CategoryBaseModel(BaseModel):
     """
     Base model for category.
     """
-    uid: UUID
+    uid: Optional[UUID] = None
     name: str = Field(..., description="Nome da categoria")
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategoryCreateModel(CategoryBaseModel):
@@ -51,13 +53,3 @@ class CategoryOutDeleteModel(BaseModel):
     message: str
     status: str
     data: CategoryBaseModel | None
-
-
-class CategoryModel(BaseModel):
-    """
-    Model for the response of a single category.
-    """
-    uid: UUID
-    name: str = Field(..., description="Nome da categoria")
-
-    model_config = ConfigDict(from_attributes=True)

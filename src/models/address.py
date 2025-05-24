@@ -19,6 +19,7 @@ class Address(SQLModel, table=True):
     city: str
     state: str
     country: str
+    number: int
     postal_code: str
     customer: Optional["Customer"] = Relationship(back_populates="addresses")
     created_at: datetime = Field(sa_column=Column(pg.TIMESTAMP, default=datetime.now))

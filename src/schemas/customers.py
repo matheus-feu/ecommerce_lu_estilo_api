@@ -3,7 +3,9 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, validator
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+
+from src.schemas.address import AddressCreateModel, AddressModel
 
 
 class CustomerModel(BaseModel):
@@ -19,6 +21,7 @@ class CustomerModel(BaseModel):
     is_active: bool
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    addresses: Optional[List[AddressModel]] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -68,10 +71,11 @@ class CustomerCreateModel(BaseModel):
     last_name: str = Field(..., description="Sobrenome do cliente")
     cpf: str = Field(..., description="CPF do cliente (apenas números, 11 dígitos)")
     password: str = Field(..., description="Senha do cliente")
+    address: AddressCreateModel | None = Field(None, description="Endereço do cliente")
 
     model_config = ConfigDict(from_attributes=True)
 
-    @validator("cpf")
+    @field_validator("cpf")
     def validate_cpf(cls, cpf):
         if not cpf:
             raise ValueError("CPF é obrigatório")

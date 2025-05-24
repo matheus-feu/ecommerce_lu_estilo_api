@@ -6,10 +6,10 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.core.config import settings
+from src.core.settings import settings
 from src.core.mail import send_email
 from src.db.database import get_session
-from src.exceptions.errors import UserNotFound, InvalidToken
+from src.exceptions.errors import UserNotFoundError, InvalidTokenError
 from src.models.customer import Customer
 from src.schemas.accounts import UserCreateModel
 from src.schemas.accounts import PasswordResetConfirmModel
@@ -102,7 +102,7 @@ class AccountService:
             if email:
                 user = await UserService.get_user_by_email(email=email, session=session)
                 if not user:
-                    raise UserNotFound()
+                    raise UserNotFoundError()
 
                 await UserService.update_user(user, {"is_verified": True}, session)
 
@@ -114,7 +114,7 @@ class AccountService:
                         "status_code": status.HTTP_200_OK
                     }
                 )
-            raise UserNotFound()
+            raise UserNotFoundError()
 
         except Exception as e:
             raise HTTPException(
@@ -130,17 +130,17 @@ class AccountService:
         try:
             token_data = decode_token(token_details.credentials)
             if not token_data:
-                raise InvalidToken("Token inválido ou malformado")
+                raise InvalidTokenError("Token inválido ou malformado")
 
             expiry_timestamp = token_data["exp"]
             if datetime.fromtimestamp(expiry_timestamp) > datetime.now():
                 new_access_token = create_access_token(
                     user_data=token_data,
-                    expiry=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+                    expiry=timedelta(minutes=settings.auth.ACCESS_TOKEN_EXPIRE_MINUTES)
                 )
                 return JSONResponse(content={"access_token": new_access_token})
 
-            raise InvalidToken("Refresh token expirado")
+            raise InvalidTokenError("Refresh token expirado")
 
         except Exception as e:
             raise HTTPException(
@@ -168,11 +168,14 @@ class AccountService:
                 )
 
             access_token = create_url_safe_token({"email": email})
-            forget_url_link = f"{settings.APP_PROTOCOL}://{settings.APP_HOST}:{settings.APP_PORT}{settings.APP_V1_PREFIX}/auth/{settings.FORGET_PASSWORD_URL}?token={access_token}"
+            forget_url_link = (
+                f"{settings.app.APP_PROTOCOL}://{settings.app.APP_HOST}:{settings.app.APP_PORT}"
+                f"{settings.app.APP_V1_PREFIX}/auth/{settings.auth.FORGET_PASSWORD_URL}?token={access_token}"
+            )
 
             email_body = {
-                "company_name": settings.MAIL_FROM_NAME,
-                "link_expiry_min": settings.FORGET_PASSWORD_LINK_EXPIRE_MINUTES,
+                "company_name": settings.email.MAIL_FROM_NAME,
+                "link_expiry_min": settings.auth.FORGET_PASSWORD_LINK_EXPIRE_MINUTES,
                 "reset_link": forget_url_link
             }
             template_str = """
@@ -224,7 +227,7 @@ class AccountService:
             if email:
                 user = await UserService.get_user_by_email(email=email, session=session)
                 if not user:
-                    raise UserNotFound()
+                    raise UserNotFoundError()
 
                 hashed_password = generate_password_hash(password_data.new_password)
                 user.password_hash = hashed_password

@@ -1,8 +1,12 @@
 import uuid
 from typing import List
+from typing import TYPE_CHECKING
 
 import sqlalchemy.dialects.postgresql as pg
 from sqlmodel import SQLModel, Field, Relationship, Column
+
+if TYPE_CHECKING:
+    from src.models.product import Product
 
 
 class Category(SQLModel, table=True):
