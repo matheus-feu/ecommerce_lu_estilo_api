@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from src.core.sentry import send_to_sentry
 from src.exceptions.errors import ErrorResponse, ProductNotFoundError
 from src.filters.orders import OrderFilter
 from src.models.address import Address
@@ -28,7 +29,7 @@ class OrderService:
             return paginate(orders)
 
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def create_order(cls, session: AsyncSession, order_data: OrderCreateModel):
@@ -101,7 +102,7 @@ class OrderService:
             )
 
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def get_order(cls, session: AsyncSession, order_id: UUID):
@@ -121,4 +122,4 @@ class OrderService:
             return OrderBaseModel.from_orm_with_items(order)
 
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)

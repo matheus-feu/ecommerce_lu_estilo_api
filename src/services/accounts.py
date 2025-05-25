@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.core.sentry import send_to_sentry
 from src.core.settings import settings
 from src.core.mail import send_email
 from src.db.database import get_session
@@ -116,11 +117,10 @@ class AccountService:
                 )
             raise UserNotFoundError()
 
+        except UserNotFoundError:
+            raise UserNotFoundError("User not found.")
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
-            )
+            send_to_sentry(e)
 
     @classmethod
     async def refresh_token(cls, token_details: dict):
@@ -142,11 +142,10 @@ class AccountService:
 
             raise InvalidTokenError("Refresh token expirado")
 
+        except InvalidTokenError:
+            raise InvalidTokenError("Token inválido ou malformado")
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token inválido ou malformado: {str(e)}"
-            )
+            send_to_sentry(e)
 
     @classmethod
     async def password_reset_request(
@@ -197,11 +196,13 @@ class AccountService:
                 content={"message": "Email has been sent", "success": True, "status_code": status.HTTP_200_OK}
             )
 
-        except Exception as e:
+        except HTTPException as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
+                status_code=e.status_code,
+                detail=e.detail
             )
+        except Exception as e:
+            send_to_sentry(e)
 
     @classmethod
     async def reset_account_password(
@@ -237,8 +238,8 @@ class AccountService:
                 status_code=status.HTTP_200_OK,
                 content={"message": "Password reset successfully", "success": True, "status_code": status.HTTP_200_OK}
             )
+
+        except UserNotFoundError:
+            raise UserNotFoundError("User not found.")
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"An error occurred: {str(e)}"
-            )
+            send_to_sentry(e)

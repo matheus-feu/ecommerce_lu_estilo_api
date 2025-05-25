@@ -57,6 +57,10 @@ class RedisSettings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
 
+class SentrySettings(BaseSettings):
+    SENTRY_DSN: str
+
+
 class MQTTSettings(BaseSettings):
     MQTT_HOST: str
     MQTT_PORT: int
@@ -89,6 +93,7 @@ class Settings(BaseSettings):
     mqtt: MQTTSettings = MQTTSettings()
     email: EmailSettings = EmailSettings()
     logs: LoggingSettings = LoggingSettings()
+    sentry: SentrySettings = SentrySettings()
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

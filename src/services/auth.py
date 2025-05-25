@@ -4,6 +4,7 @@ from fastapi import BackgroundTasks
 from fastapi import status
 from starlette.responses import JSONResponse
 
+from src.core.sentry import send_to_sentry
 from src.core.settings import settings
 from src.core.mail import send_email
 from src.db.redis import add_jti_to_blocklist
@@ -65,8 +66,10 @@ class AuthService:
                 message="User created successfully. Please check your email for verification.",
             )
 
+        except UserAlreadyExistsError:
+            raise UserAlreadyExistsError("User with this email already exists.")
         except Exception as e:
-            raise UserAlreadyExistsError("User with this email already exists: {}".format(e))
+            send_to_sentry(e)
 
     @classmethod
     async def login(cls, login_data, session):
@@ -116,7 +119,7 @@ class AuthService:
         except InvalidCredentialsError:
             raise InvalidCredentialsError("Account not verified. Please check your email to verify your account.")
         except Exception as e:
-            raise Exception(f"An error occurred: {str(e)}")
+            send_to_sentry(e)
 
     @classmethod
     async def logout(cls, token_details):
@@ -132,5 +135,5 @@ class AuthService:
             await add_jti_to_blocklist(jti)
 
             return JSONResponse(content={"message": "Logged Out Successfully"}, status_code=status.HTTP_200_OK)
-        except Exception:
-            raise InvalidTokenError("Token inválido ou malformado")
+        except Exception as e:
+            send_to_sentry(e)

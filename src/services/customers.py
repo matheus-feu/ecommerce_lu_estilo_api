@@ -4,9 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.core.sentry import send_to_sentry
 from src.exceptions.errors import (
     UserNotFoundError,
-    ErrorResponse,
     CustomerAlreadyExistsError
 )
 from src.models.address import Address
@@ -43,7 +43,7 @@ class CustomerService:
         except UserNotFoundError as e:
             raise UserNotFoundError(str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def create_customer(cls, session: AsyncSession, costumer: CustomerCreateModel):
@@ -80,7 +80,7 @@ class CustomerService:
         except CustomerAlreadyExistsError as e:
             raise CustomerAlreadyExistsError(str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def update_customer(cls, session: AsyncSession, customer_id: int, update_customer: CustomerUpdateModel):
@@ -111,27 +111,27 @@ class CustomerService:
         except UserNotFoundError as e:
             raise UserNotFoundError(str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
-        @classmethod
-        async def delete_customer(cls, session: AsyncSession, customer_id: int):
-            try:
-                query = select(Customer).where(Customer.uid == customer_id)
-                result = await session.execute(query)
-                db_customer = result.scalar_one_or_none()
-                if not db_customer:
-                    raise UserNotFoundError(f"Cliente com ID {customer_id} não encontrado.")
+    @classmethod
+    async def delete_customer(cls, session: AsyncSession, customer_id: int):
+        try:
+            query = select(Customer).where(Customer.uid == customer_id)
+            result = await session.execute(query)
+            db_customer = result.scalar_one_or_none()
+            if not db_customer:
+                raise UserNotFoundError(f"Cliente com ID {customer_id} não encontrado.")
 
-                await session.delete(db_customer)
-                await session.commit()
+            await session.delete(db_customer)
+            await session.commit()
 
-                return {
-                    "message": "Cliente atualizado com sucesso",
-                    "status": "success",
-                    "data": CustomerModel.model_validate(db_customer).model_dump()
-                }
+            return {
+                "message": "Cliente atualizado com sucesso",
+                "status": "success",
+                "data": CustomerModel.model_validate(db_customer).model_dump()
+            }
 
-            except UserNotFoundError as e:
-                raise UserNotFoundError(str(e))
-            except Exception as e:
-                raise ErrorResponse(message=str(e))
+        except UserNotFoundError as e:
+            raise UserNotFoundError(str(e))
+        except Exception as e:
+            send_to_sentry(e)

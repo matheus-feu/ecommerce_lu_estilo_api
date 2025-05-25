@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
+from src.core.sentry import send_to_sentry
 from src.exceptions.errors import (
     ErrorResponse,
     CategoryNotFoundError,
@@ -31,7 +32,7 @@ class CategoryService:
         except CategoryNotFoundError as e:
             raise CategoryNotFoundError(message=str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def create_category(cls, session: AsyncSession, category_data: CategoryCreateModel):
@@ -53,8 +54,7 @@ class CategoryService:
                 "data": db_category,
             }
         except Exception as e:
-            await session.rollback()
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def update_category(cls, session: AsyncSession, category_id: int, updated_category):
@@ -79,7 +79,7 @@ class CategoryService:
                 "data": db_category,
             }
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def delete_category(cls, session: AsyncSession, category_id: int):
@@ -101,4 +101,4 @@ class CategoryService:
             }
 
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)

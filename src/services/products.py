@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from src.core.sentry import send_to_sentry
 from src.exceptions.errors import (
-    ErrorResponse,
     ProductAlreadyExistsError,
     CategoryNotFoundError,
 )
@@ -52,7 +52,7 @@ class ProductService:
             return paginate(products_out)
 
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def create_product(cls, session, product_data: ProductCreateModel):
@@ -117,7 +117,7 @@ class ProductService:
         except CategoryNotFoundError as e:
             raise CategoryNotFoundError(message=str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def get_product(cls, session: AsyncSession, product_id: UUID):
@@ -146,7 +146,7 @@ class ProductService:
         except NoResultFound as e:
             raise NoResultFound(message=str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def update_product(cls, session: AsyncSession, product_id: UUID, product_data: ProductUpdateModel):
@@ -171,13 +171,23 @@ class ProductService:
         except NoResultFound as e:
             raise NoResultFound(message=str(e))
         except Exception as e:
-            raise ErrorResponse(message=str(e))
+            send_to_sentry(e)
 
     @classmethod
     async def delete_product(cls, session: AsyncSession, product_id: UUID):
-        result = await session.execute(select(Product).where(Product.id == product_id))
-        product = result.scalar_one_or_none()
-        if not product:
-            raise NoResultFound("Produto não encontrado")
-        await session.delete(product)
-        await session.commit()
+        try:
+            result = await session.execute(select(Product).where(Product.id == product_id))
+            product = result.scalar_one_or_none()
+            if not product:
+                raise NoResultFound("Produto não encontrado")
+            await session.delete(product)
+            await session.commit()
+            return {
+                "message": "Product deleted successfully",
+                "status": "success",
+                "data": product
+            }
+        except NoResultFound as e:
+            raise NoResultFound(message=str(e))
+        except Exception as e:
+            send_to_sentry(e)
